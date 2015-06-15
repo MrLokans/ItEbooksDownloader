@@ -5,6 +5,7 @@ import requests
 
 from bs4 import BeautifulSoup as bs
 
+BASE_URL = "http://it-ebooks.info"
 BASIC_URL = "http://it-ebooks.info/book/"
 DOWNLOAD_DIR = "IT_BOOKS"
 
@@ -13,16 +14,17 @@ class Book(object):
 
     def __init__(self, bs_object):
         self.__soup = bs_object
+        self.__site_table = self.__soup.find(class_="ebook_view")
         self.title = self.get_title()
         self.subtitle = self.get_subtitle()
         self.description = self.get_description()
-        self.author = ""
-        self.ISBN = ""
-        self.year = ""
-        self.pages = ""
-        self.format = ""
-        self.download_url = ""
-        self.cover_url = ""
+        self.author = self.get_authors()
+        self.ISBN = self.get_isbn()
+        self.year = self.get_year()
+        self.pages = self.get_pages()
+        self.format = self.get_format()
+        self.download_url = self.get_url()
+        self.cover_url = self.get_cover_url()
 
     def get_authors(self):
         pass
@@ -42,22 +44,26 @@ class Book(object):
             return ""
 
     def get_description(self):
-        return self.__soup.find("span", itemprop="description").text
+        return self.__site_table.find("span", itemprop="description").text
 
     def get_year(self):
-        return self.__soup.find("b", itemprop="datePublished").text
+        return self.__site_table.find("b", itemprop="datePublished").text
 
     def get_pages(self):
-        return self.__soup.find("b", itemprop="numberOfPages").text
+        return self.__site_table.find("b", itemprop="numberOfPages").text
 
     def get_format(self):
-        return self.__soup.find("b", itemprop="bookFormat").text
-
-    def get_url(self):
-        return self.__soup.find("b", itemprop="author").text
+        return self.__site_table.find("b", itemprop="bookFormat").text
 
     def get_isbn(self):
-        return self.__soup.find("b", itemprop="isbn").text
+        return self.__site_table.find("b", itemprop="isbn").text
+
+    def get_url(self):
+        # TODO: completely rethink this idea of obtaining url
+        return self.__site_table.tr.findAll("td")[21].a["href"]
+
+    def get_cover_url(self):
+        return "".join([BASE_URL, self.__site_table.find("img", itemprop="image")["src"]])
 
     def write_metadata(self):
         pass
@@ -86,8 +92,15 @@ def main():
         print("Title: ", book.title)
         print("Subtitle:", book.subtitle)
         print("Description: ", book.description)
+        print("Author: ", book.author)
+        print("Pages: ", book.pages)
+        print("Year: ", book.year)
+        print("Cover url: ", book.cover_url)
+        print("Book url: ", book.download_url)
+        r = requests.get(book.download_url)
+        print(r.text)
         print("-=" * 10)
-        if i > 30:
+        if i > 3:
             exit(0)
 
 
