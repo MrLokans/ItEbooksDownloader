@@ -3,6 +3,7 @@ import os
 import json
 import requests
 
+from collections import OrderedDict
 from bs4 import BeautifulSoup as bs
 
 BASE_URL = "http://it-ebooks.info"
@@ -18,7 +19,7 @@ class Book(object):
         self.title = self.get_title()
         self.subtitle = self.get_subtitle()
         self.description = self.get_description()
-        self.author = self.get_authors()
+        self.authors = self.get_authors()
         self.ISBN = self.get_isbn()
         self.year = self.get_year()
         self.pages = self.get_pages()
@@ -27,7 +28,7 @@ class Book(object):
         self.cover_url = self.get_cover_url()
 
     def get_authors(self):
-        pass
+        return ""
 
     def get_title(self):
         try:
@@ -44,19 +45,19 @@ class Book(object):
             return ""
 
     def get_description(self):
-        return self.__site_table.find("span", itemprop="description").text
+        return self._tag_info("span", {"itemprop": "description"})
 
     def get_year(self):
-        return self.__site_table.find("b", itemprop="datePublished").text
+        return self._tag_info("b", {"itemprop": "datePublished"})
 
     def get_pages(self):
-        return self.__site_table.find("b", itemprop="numberOfPages").text
+        return self._tag_info("b", {"itemprop": "numberOfPages"})
 
     def get_format(self):
-        return self.__site_table.find("b", itemprop="bookFormat").text
+        return self._tag_info("b", {"itemprop": "bookFormat"})
 
     def get_isbn(self):
-        return self.__site_table.find("b", itemprop="isbn").text
+        return self._tag_info("b", {"itemprop": "isbn"})
 
     def get_url(self):
         # TODO: completely rethink this idea of obtaining url
@@ -72,7 +73,25 @@ class Book(object):
         pass
 
     def to_json(self):
-        pass
+        json_meta = OrderedDict()
+        json_meta.update({
+                    "title": self.title,
+                    "subtitle": self.subtitle,
+                    "authors": self.authors,
+                    "description": self.description,
+                    "url": self.download_url,
+                    "cover_url": self.cover_url,
+                    "isbn": self.ISBN,
+                    "format": self.format,
+                    "pages": self.pages
+        })
+        return json.dumps(json_meta)
+
+    def _tag_info(self, tag_name, attr_dict):
+        try:
+            return self.__site_table.find(tag_name, **attr_dict).text
+        except AttributeError:
+            return ""
 
     def __repr__(self):
         return "<Book '{} - {}'>".format(self.title, self.subtitle)
@@ -92,13 +111,13 @@ def main():
         print("Title: ", book.title)
         print("Subtitle:", book.subtitle)
         print("Description: ", book.description)
-        print("Author: ", book.author)
+        print("Author: ", book.authors)
         print("Pages: ", book.pages)
         print("Year: ", book.year)
         print("Cover url: ", book.cover_url)
         print("Book url: ", book.download_url)
-        r = requests.get(book.download_url)
-        print(r.text)
+        print("JSON: ", book.to_json())
+        # r = requests.get(book.download_url)
         print("-=" * 10)
         if i > 3:
             exit(0)
