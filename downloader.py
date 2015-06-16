@@ -85,7 +85,7 @@ class Book(object):
         if self.authors:
             file_name = " - ".join([file_name, self.authors])
         meta_name = file_name + ".json"
-        file_name = file_name + self.format
+        file_name = ".".join([file_name, self.format])
         print("Downloading {book}".format(book=file_name))
         with open(file_name, "wb") as f:
             for chunk in b.iter_content(chunk_size=1024):
@@ -127,7 +127,7 @@ class Book(object):
 def main():
     if not os.path.exists(DOWNLOAD_DIR):
         os.mkdir(DOWNLOAD_DIR)
-    book_num = 2
+    book_num = 20
     for i in range(1, book_num+1):
         book_url = "".join([BASIC_URL, str(i)])
         print("Analyzing {url}".format(url=book_url))
