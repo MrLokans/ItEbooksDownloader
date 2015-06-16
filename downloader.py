@@ -12,7 +12,7 @@ DOWNLOAD_DIR = "IT_BOOKS"
 
 
 class Book(object):
-
+    # TODO: great problem occured with captcha enabled on server side.
     def __init__(self, bs_object):
         self.__soup = bs_object
         self.__site_table = self.__soup.find(class_="ebook_view")
@@ -45,6 +45,8 @@ class Book(object):
             return ""
 
     def get_description(self):
+        # TODO: create a dict where a map of correspondence of tags and elements
+        # is stored and use it find the desired element.
         return self._tag_info("span", {"itemprop": "description"})
 
     def get_year(self):
