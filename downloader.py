@@ -13,19 +13,25 @@ DOWNLOAD_DIR = "IT_BOOKS"
 
 class Book(object):
     # TODO: great problem occured with captcha enabled on server side.
-    def __init__(self, bs_object):
+    def __init__(self, bs_object, url):
         self.__soup = bs_object
         self.__site_table = self.__soup.find(class_="ebook_view")
-        self.title = self.get_title()
-        self.subtitle = self.get_subtitle()
-        self.description = self.get_description()
-        self.authors = self.get_authors()
-        self.ISBN = self.get_isbn()
-        self.year = self.get_year()
-        self.pages = self.get_pages()
-        self.format = self.get_format()
-        self.download_url = self.get_url()
-        self.cover_url = self.get_cover_url()
+        self.original_url = url
+        self.title = self.get_soup_value("title")
+        self.subtitle = self.get_soup_value("subtitle")
+        self.description = self.get_soup_value("description")
+        self.authors = self.get_soup_value("authors")
+        self.ISBN = self.get_soup_value("isbn")
+        self.year = self.get_soup_value("year")
+        self.pages = self.get_soup_value("pages")
+        self.format = self.get_soup_value("format")
+        self.download_url = self.get_soup_value("url")
+        self.cover_url = self.get_soup_value("cover_url")
+
+    def get_soup_value(self, field):
+        method_name = "get_" + field
+        method = getattr(self, method_name, lambda: "")
+        return method()
 
     def get_authors(self):
         return ""
@@ -72,7 +78,22 @@ class Book(object):
         pass
 
     def download_book(self):
-        pass
+        s = requests.Session()
+        s.headers.update({'referer': self.original_url})
+        b = s.get(self.download_url, stream=True)
+        file_name = self.title
+        if self.authors:
+            file_name = " - ".join([file_name, self.authors])
+        meta_name = file_name + ".json"
+        file_name = file_name + self.format
+        print("Downloading {book}".format(book=file_name))
+        with open(file_name, "wb") as f:
+            for chunk in b.iter_content(chunk_size=1024):
+                if chunk:
+                    f.write(chunk)
+                    f.flush()
+        with open(meta_name, "w") as meta:
+            meta.write(self.to_json())
 
     def to_json(self):
         json_meta = OrderedDict()
@@ -89,6 +110,10 @@ class Book(object):
         })
         return json.dumps(json_meta)
 
+    @classmethod
+    def from_url(url):
+        return Book(None)
+
     def _tag_info(self, tag_name, attr_dict):
         try:
             return self.__site_table.find(tag_name, **attr_dict).text
@@ -102,13 +127,13 @@ class Book(object):
 def main():
     if not os.path.exists(DOWNLOAD_DIR):
         os.mkdir(DOWNLOAD_DIR)
-    book_num = 5786
+    book_num = 2
     for i in range(1, book_num+1):
         book_url = "".join([BASIC_URL, str(i)])
         print("Analyzing {url}".format(url=book_url))
         r = requests.get(book_url)
         soup = bs(r.text)
-        book = Book(soup)
+        book = Book(soup, book_url)
 
         print("Title: ", book.title)
         print("Subtitle:", book.subtitle)
@@ -119,7 +144,9 @@ def main():
         print("Cover url: ", book.cover_url)
         print("Book url: ", book.download_url)
         print("JSON: ", book.to_json())
-        # r = requests.get(book.download_url)
+        s = requests.Session()
+        s.headers.update({'referer': book_url})
+        book.download_book()
         print("-=" * 10)
         if i > 3:
             exit(0)
